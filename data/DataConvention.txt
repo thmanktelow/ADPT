@@ -1,0 +1,5 @@
+# File Naming Convention
+<SUB_ID>_<TRIAL_TYPE>_<TRIAL_DATE>.mvnx
+
+e.g.
+0001_flat_20240101.mvnx
