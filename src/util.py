@@ -16,7 +16,8 @@ GRAVITY = (
 MAX_EASTING = 900000  # m approximate maximum easting coordinate in m.
 
 POLE_DENSITY = 0.192 / 1.5875  # kg/m of length
-SKI_DENSITY = 0.706 / (2.01 * 0.04445)  # kg/m^2 of area (length x width)
+# SKI_DENSITY = 0.706 / (2.01 * 0.04445)  # kg/m^2 of area (length x width)
+SKI_MASS = 1.4  # kg Typical weight of a single rollerski
 
 SEGMENT_NAMES = [
     "l_foot",
