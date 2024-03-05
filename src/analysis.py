@@ -4,7 +4,8 @@
 import os
 
 # Set working directory
-os.chdir(os.getcwd() + "/src")
+if os.getcwd().endswith("ADPT"):
+    os.chdir(os.getcwd() +"/src")
 import numpy as np
 import scipy as sp
 import copy
