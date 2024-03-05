@@ -4,4 +4,4 @@
 *.jpg
 
 # Ignore Mac specific Directories
-.DS_Store
+*.DS_Store
