@@ -91,65 +91,7 @@ t = t[frame_start:frame_end] - t[frame_start]
 N = len(poses)
 
 # ------------------------------------------------------------------------------
-# (E) Filter and augment key signals
-# ------------------------------------------------------------------------------
-# Key signals for further analysis
-# Left/right toe, left/right hand, pelvis, com position (needs to be calculated...)
-# We filter each of these key signals to remove any noise
-# We also compute velocity and acceleration of each signal via finite differencing
-
-# # Get key signals into a numpy array
-# key_signals = ["LeftToe", "RightToe", "Pelvis", "LeftHand", "RightHand"]
-# signals = np.zeros((N, 3*len(key_signals)))
-# for (i, pose) in enumerate(poses):
-#     for (j, key) in enumerate(key_signals):
-#         signals[i, 3*j:3*(j+1)] = pose.points[key]
-# # Column names
-# COLUMNS = [f"{key}_{coord}" for key in key_signals for coord in ["X", "Y", "Z"]]
-
-
-# # Determine cutoff frequency via minimization of residual autocorrelation
-# # See Challis 1999 for details.
-# cutoffs = np.zeros(signals.shape[1])
-# for i in range(signals.shape[1]):
-#     print(f"Filtering signal {columns[i]}")
-#     _, cutoffs[i] = filt_acf(signals[:, i], 1/dt)
-
-# # We use the 20th quantile of the cutoffs as the cutoff frequency
-# # This is a simple heuristic which provides a fairly aggresive filter
-# fc = np.round(np.quantile(cutoffs, q=0.2))
-
-# # Filter signals
-# signals = copy.deepcopy(signals)
-# for i in range(signals.shape[1]):
-#     signals[:, i] = filt_butter(signals[:, i], fc, 1/dt)
-
-# # Add mid point between feet and midpoint between hands to signals
-# mid_point_feet = (signals[:, :3] + signals[:, 3:6]) / 2
-# mid_point_hands = (signals[:, 6:9] + signals[:, 9:12]) / 2
-# signals = np.hstack((signals, mid_point_feet, mid_point_hands))
-# COLUMNS += ["MidFeet_X", "MidFeet_Y", "MidFeet_Z", "MidHands_X", "MidHands_Y", "MidHands_Z"]
-
-# # Add pelvis displacement to signals
-# pelvis_displacement = np.zeros((N, 3))
-# for i in range(signals.shape[0]):
-#     l_toe = signals[i, 0:3]
-#     r_toe = signals[i, 3:6]
-#     mid_point = (l_toe + r_toe) / 2
-#     # Compute displacement of as the vector connecting mid point of feet to pelvis
-#     pelvis_displacement[i, :] = signals[i, 6:9] - mid_point
-# signals = np.hstack((signals, pelvis_displacement))
-# COLUMNS += ["PelvisDisplacement_X", "PelvisDisplacement_Y", "PelvisDisplacement_Z"]
-
-# # Compute velocity and acceleration
-# signals_vel = np.zeros(signals.shape)
-# signals_acc = np.zeros(signals.shape)
-# for i in range(signals.shape[1]):
-#     signals_vel[:, i] = finite_diff(signals[:, i], t, pad=True)
-#     signals_acc[:, i] = finite_diff(signals_vel[:, i], t, pad=True)
-
-# ------------------------------------------------------------------------------
-# (D) Segment polling cycles
+# (E) Segment polling cycles
 # ------------------------------------------------------------------------------
 # Q How are we defining pole plant and recovery
 # - Force sensor in pole (need sync with MVNX data)
