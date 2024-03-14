@@ -5,7 +5,7 @@ import os
 
 # Set working directory
 if os.getcwd().endswith("ADPT"):
-    os.chdir(os.getcwd() +"/src")
+    os.chdir(os.getcwd() + "/src")
 import numpy as np
 import scipy as sp
 import copy
@@ -21,7 +21,7 @@ from filter import filt_acf, filt_butter, finite_diff
 # ------------------------------------------------------------------------------
 # Load Subject
 # set sidx to be the id of the subject of interest from the subject table
-sidx = 1
+sidx = 3
 sub = Subject(sidx)
 
 # Load a trial
@@ -62,8 +62,8 @@ t = t[:N]  # remove last element to match the length of the pose array
 # Vectical direction to identify the start/end of polling motion
 
 # Set the start and end frame for the polling motion
-frame_start = 8600  # Use 2nd bout...
-frame_end = 9950
+frame_start = 0  # Use 2nd bout...
+frame_end = len(poses)
 
 lhand = np.array([poses[i].points["LeftHand"][2] for i in range(N)])
 rhand = np.array([poses[i].points["RightHand"][2] for i in range(N)])
@@ -149,6 +149,16 @@ class PollingCycle:
                 raise ValueError("Axis must be 0, 1 or 2")
             return np.array([pose.points[key][axis] for pose in self.poses])
 
+    def get_joint_timeseries(self, key, axis=None):
+        if key not in self.poses[0].joint_angles:
+            raise ValueError(f"Key {key} not in pose joints")
+        if axis is None:
+            return np.array([pose.joint_angles[key] for pose in self.poses])
+        else:
+            if axis not in [0, 1, 2]:
+                raise ValueError("Axis must be 0, 1 or 2")
+            return np.array([pose.joint_angles[key][axis] for pose in self.poses])
+
     def filter_point(self, point, axis, fc=None):
         if axis not in [0, 1, 2]:
             raise ValueError("Axis must be 0, 1 or 2")
@@ -183,17 +193,69 @@ print(f"Number of polling cycles to analyze: {nCycles}")
 fig, ax = plt.subplots()
 ax2 = ax.twinx()
 for i, cycle in enumerate(cycles):
-    rhand = cycle.get_timeseries("RightHand", 2) - cycle.get_timeseries("MidFeet", 2)
-    lhand = cycle.get_timeseries("LeftHand", 2) - cycle.get_timeseries("MidFeet", 2)
-    pelvis = cycle.get_timeseries("Pelvis", 2) - cycle.get_timeseries("MidFeet", 2)
+    rhand = cycle.get_timeseries("RightHand", 2)  # - cycle.get_timeseries("MidFeet", 2)
+    lhand = cycle.get_timeseries("LeftHand", 2)  # - cycle.get_timeseries("MidFeet", 2)
+    pelvis = cycle.get_timeseries("Pelvis", 2)  # - cycle.get_timeseries("MidFeet", 2)
+    com = cycle.get_timeseries("CoM", 2)
     ax.plot(cycle.t, rhand, color=util.CMAP(0), alpha=0.2)
     ax.plot(cycle.t, lhand, color=util.CMAP(1), alpha=0.2)
     ax2.plot(cycle.t, pelvis, color=util.CMAP(2), alpha=0.2)
+    ax2.plot(cycle.t, com, color="black", alpha=0.2)
 ax.set_xlabel("Time (s)")
 ax.set_ylabel("Hand Z (m)")
-ax2.set_ylabel("Pelvis Z (m)")
+ax2.set_ylabel("Pelvi/CoM Z (m)")
 ax.set_title("Vertical Hand and Pelvis Position")
-ax.legend(["Right Hand", "Left Hand", "Pelvis"], loc="upper right")
+ax.legend(
+    ["Right Hand", "Left Hand", "Pelvis", "CoM"],
+    loc="lower right",
+)
+leg = ax.get_legend()
+leg.legendHandles[0].set_color(util.CMAP(0)),
+leg.legendHandles[1].set_color(util.CMAP(1)),
+leg.legendHandles[2].set_color(util.CMAP(2)),
+leg.legendHandles[3].set_color("black"),
+plt.show()
+
+# ------------------------------------------------------------------------------
+# (F) Plot joint angles
+# ------------------------------------------------------------------------------
+fig, ax = plt.subplots(1, 3)
+for i, cycle in enumerate(cycles):
+    rhip = cycle.get_joint_timeseries("jRightHip", 0)
+    rknee = cycle.get_joint_timeseries("jRightKnee", 0)
+    rankle = cycle.get_joint_timeseries("jRightAnkle", 0)
+    ax[0].plot(cycle.t, rhip, color=util.CMAP(0), alpha=0.2)
+    ax[0].plot(cycle.t, rknee, color=util.CMAP(1), alpha=0.2)
+    ax[0].plot(cycle.t, rankle, color=util.CMAP(2), alpha=0.2)
+
+    rhip = cycle.get_joint_timeseries("jRightHip", 1)
+    rknee = cycle.get_joint_timeseries("jRightKnee", 1)
+    rankle = cycle.get_joint_timeseries("jRightAnkle", 1)
+    ax[1].plot(cycle.t, rhip, color=util.CMAP(0), alpha=0.2)
+    ax[1].plot(cycle.t, rknee, color=util.CMAP(1), alpha=0.2)
+    ax[1].plot(cycle.t, rankle, color=util.CMAP(2), alpha=0.2)
+
+    rhip = cycle.get_joint_timeseries("jRightHip", 2)
+    rknee = cycle.get_joint_timeseries("jRightKnee", 2)
+    rankle = cycle.get_joint_timeseries("jRightAnkle", 2)
+    ax[2].plot(cycle.t, rhip, color=util.CMAP(0), alpha=0.2)
+    ax[2].plot(cycle.t, rknee, color=util.CMAP(1), alpha=0.2)
+    ax[2].plot(cycle.t, rankle, color=util.CMAP(2), alpha=0.2)
+fig.suptitle("Right Leg Joint Angles")
+ax[0].set_xlabel("Time (s)")
+ax[0].set_ylabel("Transverse Joint Angle (rad)")
+ax[1].set_xlabel("Time (s)")
+ax[1].set_ylabel("Frontal Joint Angle (rad)")
+ax[2].set_xlabel("Time (s)")
+ax[2].set_ylabel("Sagittal Joint Angle (rad)")
+
+# ax.set_xlabel("Time (s)")
+# ax.set_ylabel("Joint Angle (rad)")
+# ax.set_title("Right Leg Joint Angles")
+ax[2].legend(
+    ["Hip", "Knee", "Ankle"],
+    loc="lower right",
+)
 plt.show()
 
 

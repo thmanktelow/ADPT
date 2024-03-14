@@ -480,8 +480,7 @@ class MvnxFileAccessor:
         self, data_set, data_field, segment, frame=mvn.FRAMES_ALL, axis=mvn.AXIS_ALL
     ):
         if segment == 1000:
-            print("WARNING COM NOT CORRECTLY IMPLEMENTED")
-            segment_name = mvn.SEGMENTS[0]
+            segment_name = "com"
         else:
             segment_name = mvn.SEGMENTS[segment]
 
@@ -489,7 +488,8 @@ class MvnxFileAccessor:
         try:
             if data_set == "joint_data":
                 return_values = [
-                    value[data_field] for value in self.file_data["frames"][data_set][frame]
+                    value[data_field]
+                    for value in self.file_data["frames"][data_set][frame]
                 ]
             elif axis == mvn.AXIS_ALL:
                 return_values = [
