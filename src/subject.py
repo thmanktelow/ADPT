@@ -95,7 +95,7 @@ class Subject:
         print("STATUS: Loading mvnx data for subject {self.id}".format(self=self))
         files = os.listdir(util.DATA_DIR)
         for f in files:
-            if f.startswith("000{self.id}_{self.trial}_".format(self=self)):
+            if f.startswith("100{self.id}_{self.trial}_".format(self=self)):
                 self.mvnx_filename = f
                 self.mvnx = load_mvnx(util.DATA_DIR + self.mvnx_filename)
                 break

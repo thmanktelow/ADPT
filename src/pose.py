@@ -1,3 +1,8 @@
+import os
+
+# Set working directory
+if os.getcwd().endswith("ADPT"):
+    os.chdir(os.getcwd() + "/src")
 import copy
 import util
 import mvn
@@ -17,18 +22,14 @@ class Pose:
         self.frame = frame
         self.points = {}
         self.vectors = {}
+        self.joint_angles = {}
         self.coordinate_system = "Xsens"  # default coordiante system = XSense
         self.__get_points(sub)
-        # self.__get_xsens_ori()
-        # self.__to_ground()
+        self.__get_joint_angles(sub)
+        self.__to_ground()
         # self.__to_lcs()
 
     def __str__(self):
-        # com = self.get_com()
-        # vel = sel.get_com_vel()
-        # acc = self.get_com_acc()
-        # origin = self.__get_origin()
-        # ori = self.__get_ori()
         #
         return """
         Pose at frame{self.frame}:
@@ -80,6 +81,23 @@ class Pose:
     def add_point(self, name, data):
         self.points[name] = copy.deepcopy(data)
 
+    def __to_ground(self):
+        min_height = 1e12
+        # pts = copy.deepcopy(self.points)
+        for i, k in enumerate(self.points.keys()):
+            if k not in ["Origin", "CoM"]:
+                if self.points[k][2] < min_height:
+                    min_height = self.points[k][2]
+
+        if min_height != 0:
+            for i, k in enumerate(self.points.keys()):
+                if k == "CoM":
+                    com = self.get_com()
+                    com[2] = com[2] - min_height
+                    self.points["CoM"] = copy.deepcopy(com)
+                elif k != "CoM":
+                    self.points[k][2] = self.points[k][2] - min_height
+
     def get_com_vel(self):
         com_vel = None
         if self.coordinate_system == "GCS":
@@ -100,98 +118,10 @@ class Pose:
             com_acc = copy.deepcopy(self.vectors["XsenseCoMAcc"])
         return com_acc + [0, 0, -util.GRAVITY]
 
-    def __get_ori(self):
-        return copy.deepcopy(self.vectors["Ori"])
-
-    def __to_lcs(self):
-        # for i, k in enumerate(self.points.keys()):
-        #     self.points[k] = self.points[k] - self.get_com()
-        #
-        for i, k in enumerate(self.points.keys()):
-            self.points[k] = quat.rotate_vectors(
-                self.vectors["LCSOri"], self.__get_point(k)
-            )
-        self.coordinate_system = "LCS"
-
-    def __to_gcs(self):
-        if self.coordinate_system == "GCS":
-            print("WARNING: pose already in GCS - doing nothing")
-
-        elif self.coordinate_system != "LCS":
-            self.__to_lcs()
-            ori = self.vectors["Ori"]
-            for i, k in enumerate(self.points.keys()):
-                if k != "GCSOrigin":
-                    self.points[k] = (
-                        quat.rotate_vectors(self.vectors["Ori"], self.__get_point(k))
-                        + self.points["GCSOrigin"]
-                    )
-            for i, k in enumerate(self.vectors.keys()):
-                if k in ["XsensCoMVel", "XsensCoMAcc"]:
-                    self.vectors[k] = quat.rotate_vectors(ori, self.__get_vector(k))
-        else:
-            ori = self.vectors["Ori"]
-            for i, k in enumerate(self.points.keys()):
-                if k != "GCSOrigin":
-                    self.points[k] = (
-                        quat.rotate_vectors(ori, self.__get_point(k))
-                        + self.points["GCSOrigin"]
-                    )
-
-            for i, k in enumerate(self.vectors.keys()):
-                if k in ["XsensCoMVel", "XsensCoMAcc"]:
-                    self.vectors[k] = quat.rotate_vectors(ori, self.__get_vector(k))
-
-        self.coordinate_system = "GCS"
-
-    def __to_ground(self):
-        min_height = 1e12
-        # pts = copy.deepcopy(self.points)
-        for i, k in enumerate(self.points.keys()):
-            if k not in ["Origin", "CoM"]:
-                if self.points[k][2] < min_height:
-                    min_height = self.points[k][2]
-
-        if min_height != 0:
-            for i, k in enumerate(self.points.keys()):
-                if k == "CoM":
-                    com = self.get_com()
-                    com[2] = com[2] - min_height
-                    self.points["CoM"] = copy.deepcopy(com)
-                elif k != "CoM":
-                    self.points[k][2] = self.points[k][2] - min_height
-
-    def __parse_coordinate_systems(self, cs):
-        if cs not in ["GCS", "LCS", "Xsens"]:
-            raise ValueError(
-                '{} is not a valid coordinate system.  \nValid coordinate systems are ["GCS", "LCS", "Xsens"]'
-            )
-
-    def __get_xsens_ori(self):
-        pelvis = self.points["Pelvis"]
-        r_hip = self.points["RightUpperLeg"]
-
-        # rotate and project given orientation of pelvis.
-        v1 = r_hip - pelvis
-        v3 = np.array([0, 0, 1])
-        v2 = np.cross(v3, v1)
-        v1 = np.cross(v2, v3)
-        v1 = v1 / np.linalg.norm(v1)
-        v2 = v2 / np.linalg.norm(v2)
-        v3 = v3 / np.linalg.norm(v3)
-
-        self.vectors["LCSOri"] = util.rel_quat(
-            v1, [1, 0, 0]
-        )  # make v1 the new x axis...
-
-    def __get_gcs_kin(self, sub):
-        ori = sub.gnss.vel[self.frame, :]
-
-        self.vectors["Ori"] = util.rel_quat(ori, [1, 0, 0])
-        self.points["GCSOrigin"] = sub.gnss.pos[self.frame, :]
-
-        self.vectors["GCSVel"] = sub.gnss.vel[self.frame, :]
-        self.vectors["GCSAcc"] = sub.gnss.acc[self.frame, :]
+    def __get_joint_angles(self, sub):
+        for joint in mvn.JOINTS.items():
+            self.joint_angles[joint[1]] = sub.mvnx.get_joint_angle(joint[0], self.frame)
+            # self.points[seg[1]] = sub.mvnx.get_segment_pos(seg[0], self.frame)
 
     def plot_pose(self, title=""):
         """
@@ -224,10 +154,10 @@ class Pose:
                 ax.scatter(pt[1], pt[0], pt[2], color=util.CMAP(2))
             elif k[:4] == "Left":
                 ax.scatter(pt[1], pt[0], pt[2], color=util.CMAP(3))
-            # elif k[:4] == "CoM":
-            #     ax.scatter(pt[1], pt[0], pt[2], color="black")
-            # elif k[:4] == "Orig":
-            # break
+            elif k[:4] == "CoM":
+                ax.scatter(pt[1], pt[0], pt[2], color="black")
+            elif k[:4] == "Orig":
+                break
             else:
                 ax.scatter(pt[1], pt[0], pt[2], color=util.CMAP(0))
 
@@ -432,10 +362,11 @@ class Pose:
 if __name__ == "__main__":
     from subject import Subject
 
-    sub = Subject(1)
+    sub = Subject(3)
     sub.load_trial("flat")
     print(sub)
 
-    frame = 5000  # Pick a random frame
+    frame = 1  # Pick a random frame
     p = Pose(sub, frame)
+
     p.plot_pose()
