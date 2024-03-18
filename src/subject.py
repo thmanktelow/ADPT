@@ -82,11 +82,11 @@ class Subject:
     def __load_data(self, trial="flat", dataset="mvnx", **kwargs):
         """
                 Loads a specific dataset
-                    :trial: <String> "uphill", "flat"
+                    :trial: <String> "climb", "flat"
         ="""
         self.trial = trial
         # check arguments
-        if self.trial not in ["flat", "uphill"]:
+        if self.trial not in ["flat", "climb"]:
             raise ValueError("{trial} type not valid".format(trial=self.trial))
 
         if dataset not in ["mvnx"]:
@@ -103,7 +103,7 @@ class Subject:
             raise ValueError("{dataset} type not valid.".format(dataset=dataset))
 
     def load_trial(self, trial_name):
-        if trial_name not in ["flat", "uphill"]:
+        if trial_name not in ["flat", "climb"]:
             raise ValueError("{self.trial} type not valid".format(self=self))
 
         self.trial = trial_name

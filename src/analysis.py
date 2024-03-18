@@ -25,7 +25,7 @@ sidx = 3
 sub = Subject(sidx)
 
 # Load a trial
-# Set trial" to be either flat or uphill (the trial of interest).
+# Set trial" to be either flat or climb (the trial of interest).
 # Note that this needs to match the namining convention for the MVNX files
 trial = "flat"
 sub.load_trial(trial)
@@ -84,7 +84,7 @@ plt.vlines(
 plt.legend(["Left Hand", "Right Hand"])
 plt.xlabel("Frame")
 plt.title("Trial Segmentation")
-plt.show()
+#plt.show()
 
 
 poses = poses[frame_start:frame_end]
@@ -110,14 +110,14 @@ min_distance = 0.7  # Need to set this parameter based on length of polling cycl
 mid_hand_z = np.array([poses[i].points["MidHands"][2] for i in range(N)])
 fc = 25  # Cutoff frequency for filtering
 mid_hand_z = filt_butter(mid_hand_z, fc, 1 / dt)
-pk = sp.signal.find_peaks(mid_hand_z, distance=min_distance / dt)
+pk = sp.signal.find_peaks(-mid_hand_z, distance=min_distance / dt)
 fig, ax1 = plt.subplots()
 ax1.plot(t, mid_hand_z)
 ax1.plot(t[pk[0]], mid_hand_z[pk[0]], "x")
 ax1.set_ylabel("Vert. Hand Pos (m)")
 ax1.set_xlabel("Time (s)")
 ax1.set_title("Polling Cycle Segmentation")
-plt.show()
+#plt.show()
 
 
 # trim to full polling cycles
@@ -186,8 +186,31 @@ nCycles = len(cycles)  # number of polling cycles examined.
 print(f"Number of polling cycles to analyze: {nCycles}")
 
 
+
+# ---------------------------------------------------------------------------------------------------
+# E) Compute timing of peak pelvis height and hand height
+# ------------------------------------------------------------------------------------------------------
+# Get peak pelvis height
+pelvis_max_times = []
+mid_hand_max_times = []
+for i, cycle in enumerate(cycles):
+    pelvis_z = cycle.get_timeseries("Pelvis", 2)
+    pk_pelvis_z = np.where(pelvis_z == np.max(pelvis_z))
+    pelvis_max_times.append(cycle.t[pk_pelvis_z][0])
+
+    mid_hand_z = cycle.get_timeseries("MidHands", 2)
+    pk_mid_hand_z = np.where(mid_hand_z == np.max(mid_hand_z))
+    mid_hand_max_times.append(cycle.t[pk_mid_hand_z][0])
+
+
+print(pelvis_max_times)
+print(mid_hand_max_times)
+timing_delta = np.array(mid_hand_max_times) - np.array(pelvis_max_times)
+print("Hands - pelvis:")
+print(timing_delta)
+print("Mean delta_t: {} sd: {}".format(np.mean(timing_delta), np.std(timing_delta)))
 # ------------------------------------------------------------------------------
-# (E) Visualize polling cycles
+# (F) Visualize polling cycles
 # ------------------------------------------------------------------------------
 # Plot of relationship between hand and pelvis vertical position
 fig, ax = plt.subplots()
@@ -214,33 +237,40 @@ leg.legendHandles[0].set_color(util.CMAP(0)),
 leg.legendHandles[1].set_color(util.CMAP(1)),
 leg.legendHandles[2].set_color(util.CMAP(2)),
 leg.legendHandles[3].set_color("black"),
-plt.show()
+#plt.show()
 
 # ------------------------------------------------------------------------------
 # (F) Plot joint angles
 # ------------------------------------------------------------------------------
 fig, ax = plt.subplots(1, 3)
 for i, cycle in enumerate(cycles):
+    rshoulder = cycle.get_joint_timeseries("jRightShoulder", 0)
     rhip = cycle.get_joint_timeseries("jRightHip", 0)
     rknee = cycle.get_joint_timeseries("jRightKnee", 0)
     rankle = cycle.get_joint_timeseries("jRightAnkle", 0)
     ax[0].plot(cycle.t, rhip, color=util.CMAP(0), alpha=0.2)
     ax[0].plot(cycle.t, rknee, color=util.CMAP(1), alpha=0.2)
     ax[0].plot(cycle.t, rankle, color=util.CMAP(2), alpha=0.2)
+    ax[0].plot(cycle.t, rshoulder, color=util.CMAP(3), alpha = 0.2)
 
+    rshoulder = cycle.get_joint_timeseries("jRightShoulder", 1)
     rhip = cycle.get_joint_timeseries("jRightHip", 1)
     rknee = cycle.get_joint_timeseries("jRightKnee", 1)
     rankle = cycle.get_joint_timeseries("jRightAnkle", 1)
     ax[1].plot(cycle.t, rhip, color=util.CMAP(0), alpha=0.2)
     ax[1].plot(cycle.t, rknee, color=util.CMAP(1), alpha=0.2)
     ax[1].plot(cycle.t, rankle, color=util.CMAP(2), alpha=0.2)
+    ax[1].plot(cycle.t, rshoulder, color=util.CMAP(3), alpha = 0.2)
 
+    rshoulder = cycle.get_joint_timeseries("jRightShoulder", 2)
     rhip = cycle.get_joint_timeseries("jRightHip", 2)
     rknee = cycle.get_joint_timeseries("jRightKnee", 2)
     rankle = cycle.get_joint_timeseries("jRightAnkle", 2)
     ax[2].plot(cycle.t, rhip, color=util.CMAP(0), alpha=0.2)
     ax[2].plot(cycle.t, rknee, color=util.CMAP(1), alpha=0.2)
     ax[2].plot(cycle.t, rankle, color=util.CMAP(2), alpha=0.2)
+    ax[2].plot(cycle.t, rshoulder, color=util.CMAP(3), alpha = 0.2)
+
 fig.suptitle("Right Leg Joint Angles")
 ax[0].set_xlabel("Time (s)")
 ax[0].set_ylabel("Transverse Joint Angle (rad)")
@@ -253,10 +283,17 @@ ax[2].set_ylabel("Sagittal Joint Angle (rad)")
 # ax.set_ylabel("Joint Angle (rad)")
 # ax.set_title("Right Leg Joint Angles")
 ax[2].legend(
-    ["Hip", "Knee", "Ankle"],
+    ["Hip", "Knee", "Ankle", "shoulder"],
     loc="lower right",
 )
 plt.show()
+
+#poses[10].plot_pose()
+
+
+
+
+
 
 
 # Things to consider:
